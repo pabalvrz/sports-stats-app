@@ -1,0 +1,9 @@
+services:
+  postgres:
+    image: 'postgres:latest'
+    environment:
+      - 'POSTGRES_DB=sports_catalog_db'
+      - 'POSTGRES_PASSWORD=sports_catalog_pass'
+      - 'POSTGRES_USER=sports_catalog_user'
+    ports:
+      - '5432'
