@@ -1,7 +1,8 @@
-package com.pabalvrz.sportsstatsapp.application.usecases;
+package com.pabalvrz.sportsstatsapp.application.query.list;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.pabalvrz.sportsstatsapp.application.result.SportResult;
 import com.pabalvrz.sportsstatsapp.domain.model.Sport;
 import com.pabalvrz.sportsstatsapp.domain.ports.out.SportRepositoryPort;
 import java.util.ArrayList;
@@ -10,19 +11,26 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
-class CreateSportUseCaseImplTest {
+class ListSportsQueryHandlerTest {
 
 	private final InMemorySportRepository sportRepository = new InMemorySportRepository();
-	private final CreateSportUseCaseImpl createSportUseCase = new CreateSportUseCaseImpl(sportRepository);
+	private final ListSportsQueryHandler handler = new ListSportsQueryHandler(sportRepository);
 
 	@Test
-	void createsActiveSport() {
-		Sport sport = createSportUseCase.execute("Football");
+	void listsSports() {
+		Sport football = Sport.reconstitute(UUID.randomUUID(), "Football", true);
+		Sport tennis = Sport.reconstitute(UUID.randomUUID(), "Tennis", false);
+		sportRepository.save(football);
+		sportRepository.save(tennis);
 
-		assertThat(sport.getId()).isNotNull();
-		assertThat(sport.getName()).isEqualTo("Football");
-		assertThat(sport.isActive()).isTrue();
-		assertThat(sportRepository.findAll()).containsExactly(sport);
+		List<SportResult> sports = handler.handle(new ListSportsQuery());
+
+		assertThat(sports).containsExactly(SportResult.from(football), SportResult.from(tennis));
+	}
+
+	@Test
+	void exposesHandledQueryType() {
+		assertThat(handler.queryType()).isEqualTo(ListSportsQuery.class);
 	}
 
 	private static final class InMemorySportRepository implements SportRepositoryPort {

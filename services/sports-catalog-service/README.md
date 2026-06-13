@@ -216,11 +216,24 @@ com.pabalvrz.sportsstatsapp
 |   |-- exception
 |   |-- model
 |   `-- ports
-|       |-- in
 |       `-- out
 |-- application
+|   |-- command
+|   |   |-- Command.java
+|   |   |-- CommandBus.java
+|   |   |-- CommandHandler.java
+|   |   |-- SimpleCommandBus.java
+|   |   |-- create
+|   |   `-- update
 |   |-- exception
-|   `-- usecases
+|   |-- result
+|   `-- query
+|       |-- Query.java
+|       |-- QueryBus.java
+|       |-- QueryHandler.java
+|       |-- SimpleQueryBus.java
+|       |-- find
+|       `-- list
 `-- infrastructure
     `-- adapters
         |-- input
@@ -244,21 +257,40 @@ Contains the business model and pure domain concepts.
 Responsibilities:
 
 - Domain models
-- Input and output ports
+- Output ports
 - Domain exceptions
 
 The domain layer should not depend on Spring, JPA, REST APIs or infrastructure details.
 
+`Sport` is the domain model. It protects its own invariants, including required identifiers and valid sport names. Name validation and trimming are internal domain behavior; the domain model should not expose public normalization utility methods just so application or infrastructure code can call them.
+
 ### application
 
-Contains application use cases.
+Contains the internal CQRS application model: commands, queries, handlers, and synchronous buses.
 
 Responsibilities:
 
+- Defining command objects for state-changing operations
+- Defining query objects for read-only operations
+- Dispatching commands through `CommandBus`
+- Dispatching queries through `QueryBus`
+- Handling each command/query in a dedicated handler
+- Returning application result DTOs to REST adapters
 - Orchestrating domain logic
 - Defining application-level flows
-- Implementing domain use case contracts
 - Translating missing resources into application exceptions
+
+Commands currently cover creating and updating sports. Queries currently cover listing sports, finding a sport by id, and finding a sport by name.
+
+The command bus and query bus are simple in-process dispatchers backed by Spring-managed handlers. `SimpleCommandBus` and `SimpleQueryBus` build handler registries from each handler's command/query type. Both return application result DTOs, so REST controllers do not expose or map domain models directly. This design does not introduce event sourcing, messaging, async processing, separate read databases, or separate read models.
+
+The service intentionally keeps three separate output objects:
+
+- `Sport` as the domain model.
+- `SportResult` as the application output model returned by command/query handlers.
+- `SportResponse` as the REST response model returned by controllers.
+
+Queries receive raw input from the adapter layer. For name lookup, `GetSportByNameQueryHandler` passes the input name to `SportRepositoryPort.findByName(...)`; matching details such as whitespace and case handling stay behind the repository port in the persistence adapter.
 
 ### infrastructure
 

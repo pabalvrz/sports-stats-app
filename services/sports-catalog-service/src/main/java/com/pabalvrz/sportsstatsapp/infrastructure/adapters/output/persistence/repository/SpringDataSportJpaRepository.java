@@ -4,8 +4,11 @@ import com.pabalvrz.sportsstatsapp.infrastructure.adapters.output.persistence.en
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface SpringDataSportJpaRepository extends JpaRepository<SportJpaEntity, UUID> {
 
-	Optional<SportJpaEntity> findByName(String name);
+	@Query("select sport from SportJpaEntity sport where lower(trim(sport.name)) = lower(trim(:name))")
+	Optional<SportJpaEntity> findByNameMatching(@Param("name") String name);
 }
