@@ -2,54 +2,63 @@
 
 Open source microservices-based sports statistics platform built with Java, Spring Boot, PostgreSQL and Docker.
 
-## Project status
+## Project Status
 
-This project is in its initial setup phase.
+This project is in its early development phase.
 
-The current goal is to establish a clean monorepo structure, define the first backend microservice and prepare the project for future collaborative development.
+The current focus is the first backend microservice: `sports-catalog-service`, which exposes the initial sports catalog API and establishes the project architecture for future services.
 
-## Architecture approach
+## Architecture Approach
 
 This repository is organized as a monorepo.
 
-Each backend service will live inside the `services/` directory as an independent Spring Boot application.
+Each backend service lives inside the `services/` directory as an independent Spring Boot application.
 
 ```txt
 sports-stats-app/
-├── services/
-│   └── sports-catalog-service/
-├── infrastructure/
-├── docs/
-├── .github/
-├── README.md
-├── CONTRIBUTING.md
-└── LICENSE
+|-- services/
+|   `-- sports-catalog-service/
+|-- .github/
+|-- README.md
+|-- CONTRIBUTING.md
+`-- LICENSE
 ```
 
-## Current services
+## Current Services
 
 ### sports-catalog-service
 
-Initial Spring Boot microservice responsible for the shared sports catalog domain.
+Spring Boot microservice responsible for the shared sports catalog domain.
 
-This service will be the base for common sports data such as:
-
-* Sports
-* Countries
-* Competitions
-* Seasons
-* Base catalog entities shared by future sport-specific services
+The first supported aggregate is `Sport`, with endpoints to create, list, retrieve by identifier, retrieve by name and update sports.
 
 Current status:
 
 * Spring Boot project created
 * Java 21 configured
 * Maven configured
-* Docker Compose support enabled
 * PostgreSQL local dependency prepared
+* Flyway migration for the `sports` table
 * Actuator health check available
+* Sports REST API available
 
-## Planned services
+Sports API summary:
+
+```http
+POST /sports
+GET /sports
+GET /sports/{id}
+GET /sports/by-name/{name}
+PUT /sports/{id}
+```
+
+See the service README for full API examples:
+
+```txt
+services/sports-catalog-service/README.md
+```
+
+## Planned Services
 
 Future services may include:
 
@@ -57,7 +66,7 @@ Future services may include:
 * `stats-service`
 * Additional sport-specific services
 
-## Tech stack
+## Tech Stack
 
 * Java 21
 * Spring Boot
@@ -70,7 +79,7 @@ Future services may include:
 * Mockito
 * Testcontainers
 
-## Local development
+## Local Development
 
 To build the current service:
 
@@ -100,12 +109,12 @@ Expected response:
 }
 ```
 
-## Contribution flow
+## Contribution Flow
 
 The project follows a branch-based workflow:
 
 ```txt
-Issue → Branch from develop → Pull Request → Review → Merge into develop
+Issue -> Branch from develop -> Pull Request -> Review -> Merge into develop
 ```
 
 Pull requests should target `develop`.
