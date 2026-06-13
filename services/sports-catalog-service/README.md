@@ -4,7 +4,7 @@ Microservice responsible for managing the sports catalog within the Open Sports 
 
 This service is part of the `sports-stats-app` monorepo. The repository root is not a Spring Boot application; this service is an independent Spring Boot application located under `services/sports-catalog-service`.
 
-## Tech stack
+## Tech Stack
 
 - Java 21
 - Spring Boot
@@ -14,7 +14,7 @@ This service is part of the `sports-stats-app` monorepo. The repository root is 
 - Docker Compose
 - Spring Boot Actuator
 
-## Run locally
+## Run Locally
 
 From this directory:
 
@@ -28,7 +28,15 @@ Health check:
 GET /actuator/health
 ```
 
-## Run tests
+Expected response:
+
+```json
+{
+  "status": "UP"
+}
+```
+
+## Run Tests
 
 From this directory:
 
@@ -38,17 +46,28 @@ From this directory:
 
 ## Sports API
 
-The first catalog aggregate is `Sport`. A sport has an identifier, name, and active flag.
+A `Sport` has an identifier, name, and active flag.
+
+Sports are created active by default. Blank names are rejected by validation/domain rules and returned as `400 Bad Request`. Missing sports are returned as `404 Not Found`.
 
 Available endpoints:
 
 ```http
 POST /sports
-GET /sports/{id}
 GET /sports
+GET /sports/{id}
+GET /sports/by-name/{name}
+PUT /sports/{id}
 ```
 
-Create request example:
+### Create Sport
+
+```http
+POST /sports
+Content-Type: application/json
+```
+
+Request:
 
 ```json
 {
@@ -56,7 +75,134 @@ Create request example:
 }
 ```
 
-Sports are created active by default. Blank names are rejected by the domain using custom sport exceptions.
+Response:
+
+```http
+201 Created
+Location: /sports/{id}
+```
+
+```json
+{
+  "id": "7d912d34-0a0d-4a21-a833-9b6f54f6d91d",
+  "name": "Football",
+  "active": true
+}
+```
+
+### List Sports
+
+```http
+GET /sports
+```
+
+Response:
+
+```json
+[
+  {
+    "id": "7d912d34-0a0d-4a21-a833-9b6f54f6d91d",
+    "name": "Football",
+    "active": true
+  },
+  {
+    "id": "b325ab0e-25ec-49c5-9987-a41e8d82a3ab",
+    "name": "Tennis",
+    "active": true
+  }
+]
+```
+
+### Get Sport By Id
+
+```http
+GET /sports/{id}
+```
+
+Response:
+
+```json
+{
+  "id": "7d912d34-0a0d-4a21-a833-9b6f54f6d91d",
+  "name": "Football",
+  "active": true
+}
+```
+
+### Get Sport By Name
+
+```http
+GET /sports/by-name/{name}
+```
+
+Example:
+
+```http
+GET /sports/by-name/Football
+```
+
+Response:
+
+```json
+{
+  "id": "7d912d34-0a0d-4a21-a833-9b6f54f6d91d",
+  "name": "Football",
+  "active": true
+}
+```
+
+### Update Sport
+
+```http
+PUT /sports/{id}
+Content-Type: application/json
+```
+
+Request:
+
+```json
+{
+  "name": "Association Football"
+}
+```
+
+Response:
+
+```json
+{
+  "id": "7d912d34-0a0d-4a21-a833-9b6f54f6d91d",
+  "name": "Association Football",
+  "active": true
+}
+```
+
+## Error Responses
+
+Invalid request body:
+
+```http
+400 Bad Request
+```
+
+```json
+{
+  "title": "Invalid request body",
+  "detail": "name: name must not be blank"
+}
+```
+
+Missing sport:
+
+```http
+404 Not Found
+```
+
+```json
+{
+  "title": "Sport not found",
+  "detail": "Sport not found: Football"
+}
+```
 
 ## Architecture
 
@@ -67,13 +213,11 @@ Current base package structure:
 ```text
 com.pabalvrz.sportsstatsapp
 |-- domain
-|   |-- event
 |   |-- exception
 |   |-- model
-|   |-- ports
-|   |   |-- in
-|   |   `-- out
-|   `-- service
+|   `-- ports
+|       |-- in
+|       `-- out
 |-- application
 |   |-- exception
 |   `-- usecases
@@ -81,7 +225,9 @@ com.pabalvrz.sportsstatsapp
     `-- adapters
         |-- input
         |   `-- rest
-        |       `-- controller
+        |       |-- controller
+        |       |-- request
+        |       `-- response
         `-- output
             `-- persistence
                 |-- entity
@@ -89,18 +235,17 @@ com.pabalvrz.sportsstatsapp
                 `-- repository
 ```
 
-## Package responsibilities
+## Package Responsibilities
 
 ### domain
 
 Contains the business model and pure domain concepts.
 
-Expected responsibilities:
+Responsibilities:
 
 - Domain models
-- Domain events
 - Input and output ports
-- Domain services
+- Domain exceptions
 
 The domain layer should not depend on Spring, JPA, REST APIs or infrastructure details.
 
@@ -108,19 +253,21 @@ The domain layer should not depend on Spring, JPA, REST APIs or infrastructure d
 
 Contains application use cases.
 
-Expected responsibilities:
+Responsibilities:
 
 - Orchestrating domain logic
 - Defining application-level flows
 - Implementing domain use case contracts
+- Translating missing resources into application exceptions
 
 ### infrastructure
 
 Contains technical adapters and framework-specific implementations.
 
-Expected responsibilities:
+Responsibilities:
 
 - REST controllers
+- Request and response DTOs
 - Persistence entities
 - Spring Data repositories
 - Persistence mappers
