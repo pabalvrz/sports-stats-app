@@ -1,4 +1,3 @@
-cat > services/sports-catalog-service/README.md <<'EOF'
 # sports-catalog-service
 
 Microservice responsible for managing the sports catalog within the Open Sports Stats platform.
@@ -11,6 +10,7 @@ This service is part of the `sports-stats-app` monorepo. The repository root is 
 - Spring Boot
 - Maven
 - PostgreSQL
+- Flyway
 - Docker Compose
 - Spring Boot Actuator
 
@@ -24,7 +24,7 @@ From this directory:
 
 Health check:
 
-```bash
+```http
 GET /actuator/health
 ```
 
@@ -36,6 +36,28 @@ From this directory:
 ./mvnw clean test
 ```
 
+## Sports API
+
+The first catalog aggregate is `Sport`. A sport has an identifier, name, and active flag.
+
+Available endpoints:
+
+```http
+POST /sports
+GET /sports/{id}
+GET /sports
+```
+
+Create request example:
+
+```json
+{
+  "name": "Football"
+}
+```
+
+Sports are created active by default. Blank names are rejected by the domain using custom sport exceptions.
+
 ## Architecture
 
 The service follows a hexagonal architecture approach, separating domain, application and infrastructure concerns.
@@ -44,23 +66,27 @@ Current base package structure:
 
 ```text
 com.pabalvrz.sportsstatsapp
-├── domain
-│   ├── event
-│   ├── model
-│   ├── repository
-│   └── service
-├── application
-│   └── usecase
-└── infrastructure
-    └── adapters
-        ├── input
-        │   └── rest
-        │       └── controller
-        └── output
-            └── persistence
-                ├── entity
-                ├── mapper
-                └── repository
+|-- domain
+|   |-- event
+|   |-- exception
+|   |-- model
+|   |-- ports
+|   |   |-- in
+|   |   `-- out
+|   `-- service
+|-- application
+|   |-- exception
+|   `-- usecases
+`-- infrastructure
+    `-- adapters
+        |-- input
+        |   `-- rest
+        |       `-- controller
+        `-- output
+            `-- persistence
+                |-- entity
+                |-- mapper
+                `-- repository
 ```
 
 ## Package responsibilities
@@ -73,7 +99,7 @@ Expected responsibilities:
 
 - Domain models
 - Domain events
-- Domain repository contracts
+- Input and output ports
 - Domain services
 
 The domain layer should not depend on Spring, JPA, REST APIs or infrastructure details.
@@ -86,7 +112,7 @@ Expected responsibilities:
 
 - Orchestrating domain logic
 - Defining application-level flows
-- Coordinating input and output boundaries through use cases
+- Implementing domain use case contracts
 
 ### infrastructure
 
@@ -100,7 +126,3 @@ Expected responsibilities:
 - Persistence mappers
 - JPA adapters
 - Framework configuration when needed
-
-## Notes
-
-This README documents the initial architectural structure only. Functional domain classes, use cases, REST endpoints and persistence implementations will be added in future features.
