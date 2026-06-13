@@ -1,7 +1,9 @@
 package com.pabalvrz.sportsstatsapp.infrastructure.adapters.input.rest.controller;
 
 import com.pabalvrz.sportsstatsapp.application.command.CommandBus;
+import com.pabalvrz.sportsstatsapp.application.command.activate.ActivateSportCommand;
 import com.pabalvrz.sportsstatsapp.application.command.create.CreateSportCommand;
+import com.pabalvrz.sportsstatsapp.application.command.deactivate.DeactivateSportCommand;
 import com.pabalvrz.sportsstatsapp.application.command.update.UpdateSportCommand;
 import com.pabalvrz.sportsstatsapp.application.query.QueryBus;
 import com.pabalvrz.sportsstatsapp.application.query.find.GetSportByIdQuery;
@@ -17,6 +19,7 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -67,6 +70,20 @@ public class SportController {
 	@PutMapping("/{id}")
 	public ResponseEntity<SportResponse> update(@PathVariable UUID id, @Valid @RequestBody UpdateSportRequest request) {
 		SportResult sport = commandBus.dispatch(new UpdateSportCommand(id, request.name()));
+
+		return ResponseEntity.ok(SportResponse.from(sport));
+	}
+
+	@PatchMapping("/{id}/activate")
+	public ResponseEntity<SportResponse> activate(@PathVariable UUID id) {
+		SportResult sport = commandBus.dispatch(new ActivateSportCommand(id));
+
+		return ResponseEntity.ok(SportResponse.from(sport));
+	}
+
+	@PatchMapping("/{id}/deactivate")
+	public ResponseEntity<SportResponse> deactivate(@PathVariable UUID id) {
+		SportResult sport = commandBus.dispatch(new DeactivateSportCommand(id));
 
 		return ResponseEntity.ok(SportResponse.from(sport));
 	}

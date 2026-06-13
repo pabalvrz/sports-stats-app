@@ -38,6 +38,28 @@ class SportTest {
 	}
 
 	@Test
+	void activatesSportKeepingIdentityAndName() {
+		Sport sport = Sport.reconstitute(UUID.randomUUID(), "Football", false);
+
+		Sport activatedSport = sport.activate();
+
+		assertThat(activatedSport.getId()).isEqualTo(sport.getId());
+		assertThat(activatedSport.getName()).isEqualTo("Football");
+		assertThat(activatedSport.isActive()).isTrue();
+	}
+
+	@Test
+	void deactivatesSportKeepingIdentityAndName() {
+		Sport sport = Sport.reconstitute(UUID.randomUUID(), "Football", true);
+
+		Sport deactivatedSport = sport.deactivate();
+
+		assertThat(deactivatedSport.getId()).isEqualTo(sport.getId());
+		assertThat(deactivatedSport.getName()).isEqualTo("Football");
+		assertThat(deactivatedSport.isActive()).isFalse();
+	}
+
+	@Test
 	void rejectsNullIdentifierWhenReconstituting() {
 		assertThatThrownBy(() -> Sport.reconstitute(null, "Football", true))
 				.isInstanceOf(SportIdentifierRequiredException.class)

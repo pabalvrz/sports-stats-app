@@ -34,6 +34,14 @@ public final class Sport {
 		return new Sport(id, name, active);
 	}
 
+	public Sport activate() {
+		return new Sport(id, name, true);
+	}
+
+	public Sport deactivate() {
+		return new Sport(id, name, false);
+	}
+
 	private static String requireName(String value) {
 		if (value == null || value.isBlank()) {
 			throw new SportNameRequiredException();
