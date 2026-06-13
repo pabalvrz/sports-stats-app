@@ -3,6 +3,7 @@ package com.pabalvrz.sportsstatsapp.infrastructure.adapters.input.rest.controlle
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -10,7 +11,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.pabalvrz.sportsstatsapp.application.command.CommandBus;
+import com.pabalvrz.sportsstatsapp.application.command.activate.ActivateSportCommand;
 import com.pabalvrz.sportsstatsapp.application.command.create.CreateSportCommand;
+import com.pabalvrz.sportsstatsapp.application.command.deactivate.DeactivateSportCommand;
 import com.pabalvrz.sportsstatsapp.application.command.update.UpdateSportCommand;
 import com.pabalvrz.sportsstatsapp.application.exception.SportNotFoundException;
 import com.pabalvrz.sportsstatsapp.application.query.QueryBus;
@@ -149,6 +152,50 @@ class SportControllerTest {
 						.content("""
 								{"name":"Tennis"}
 								"""))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.title").value("Sport not found"));
+	}
+
+	@Test
+	void activatesSport() throws Exception {
+		UUID id = UUID.randomUUID();
+		when(commandBus.dispatch(new ActivateSportCommand(id))).thenReturn(new SportResult(id, "Football", true));
+
+		mockMvc.perform(patch("/sports/{id}/activate", id))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.id").value(id.toString()))
+				.andExpect(jsonPath("$.name").value("Football"))
+				.andExpect(jsonPath("$.active").value(true));
+	}
+
+	@Test
+	void returnsNotFoundWhenActivatingMissingSport() throws Exception {
+		UUID id = UUID.randomUUID();
+		when(commandBus.dispatch(new ActivateSportCommand(id))).thenThrow(new SportNotFoundException(id));
+
+		mockMvc.perform(patch("/sports/{id}/activate", id))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.title").value("Sport not found"));
+	}
+
+	@Test
+	void deactivatesSport() throws Exception {
+		UUID id = UUID.randomUUID();
+		when(commandBus.dispatch(new DeactivateSportCommand(id))).thenReturn(new SportResult(id, "Football", false));
+
+		mockMvc.perform(patch("/sports/{id}/deactivate", id))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.id").value(id.toString()))
+				.andExpect(jsonPath("$.name").value("Football"))
+				.andExpect(jsonPath("$.active").value(false));
+	}
+
+	@Test
+	void returnsNotFoundWhenDeactivatingMissingSport() throws Exception {
+		UUID id = UUID.randomUUID();
+		when(commandBus.dispatch(new DeactivateSportCommand(id))).thenThrow(new SportNotFoundException(id));
+
+		mockMvc.perform(patch("/sports/{id}/deactivate", id))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.title").value("Sport not found"));
 	}
