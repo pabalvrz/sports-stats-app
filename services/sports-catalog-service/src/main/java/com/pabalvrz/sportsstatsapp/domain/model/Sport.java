@@ -27,7 +27,15 @@ public final class Sport {
 		return new Sport(UUID.randomUUID(), name, true);
 	}
 
+	public static String normalizeName(String name) {
+		return requireName(name);
+	}
+
 	public static Sport reconstitute(UUID id, String name, boolean active) {
+		return new Sport(id, name, active);
+	}
+
+	public Sport rename(String name) {
 		return new Sport(id, name, active);
 	}
 

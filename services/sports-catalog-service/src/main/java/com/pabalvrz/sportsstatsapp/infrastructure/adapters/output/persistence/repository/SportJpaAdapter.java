@@ -28,6 +28,11 @@ public class SportJpaAdapter implements SportRepositoryPort {
 	}
 
 	@Override
+	public Optional<Sport> findByName(String name) {
+		return springDataRepository.findByName(name).map(SportPersistenceMapper::toDomain);
+	}
+
+	@Override
 	public List<Sport> findAll() {
 		return springDataRepository.findAll().stream().map(SportPersistenceMapper::toDomain).toList();
 	}

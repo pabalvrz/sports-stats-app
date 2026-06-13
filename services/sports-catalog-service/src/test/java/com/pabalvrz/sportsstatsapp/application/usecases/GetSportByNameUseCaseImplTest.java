@@ -1,7 +1,9 @@
 package com.pabalvrz.sportsstatsapp.application.usecases;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.pabalvrz.sportsstatsapp.application.exception.SportNotFoundException;
 import com.pabalvrz.sportsstatsapp.domain.model.Sport;
 import com.pabalvrz.sportsstatsapp.domain.ports.out.SportRepositoryPort;
 import java.util.ArrayList;
@@ -10,19 +12,26 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
-class CreateSportUseCaseImplTest {
+class GetSportByNameUseCaseImplTest {
 
 	private final InMemorySportRepository sportRepository = new InMemorySportRepository();
-	private final CreateSportUseCaseImpl createSportUseCase = new CreateSportUseCaseImpl(sportRepository);
+	private final GetSportByNameUseCaseImpl getSportByNameUseCase = new GetSportByNameUseCaseImpl(sportRepository);
 
 	@Test
-	void createsActiveSport() {
-		Sport sport = createSportUseCase.execute("Football");
+	void getsSportByName() {
+		Sport sport = Sport.reconstitute(UUID.randomUUID(), "Football", true);
+		sportRepository.save(sport);
 
-		assertThat(sport.getId()).isNotNull();
-		assertThat(sport.getName()).isEqualTo("Football");
-		assertThat(sport.isActive()).isTrue();
-		assertThat(sportRepository.findAll()).containsExactly(sport);
+		Sport foundSport = getSportByNameUseCase.execute(" Football ");
+
+		assertThat(foundSport).isEqualTo(sport);
+	}
+
+	@Test
+	void failsWhenSportDoesNotExist() {
+		assertThatThrownBy(() -> getSportByNameUseCase.execute("Football"))
+				.isInstanceOf(SportNotFoundException.class)
+				.hasMessage("Sport not found: Football");
 	}
 
 	private static final class InMemorySportRepository implements SportRepositoryPort {

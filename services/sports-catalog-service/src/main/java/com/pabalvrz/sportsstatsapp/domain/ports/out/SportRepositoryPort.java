@@ -11,5 +11,7 @@ public interface SportRepositoryPort {
 
 	Optional<Sport> findById(UUID id);
 
+	Optional<Sport> findByName(String name);
+
 	List<Sport> findAll();
 }
