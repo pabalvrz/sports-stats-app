@@ -1,11 +1,13 @@
 package com.pabalvrz.sportsstatsapp.infrastructure.adapters.input.rest.controller;
 
-import com.pabalvrz.sportsstatsapp.domain.model.Sport;
-import com.pabalvrz.sportsstatsapp.domain.ports.in.CreateSportUseCase;
-import com.pabalvrz.sportsstatsapp.domain.ports.in.GetSportByIdUseCase;
-import com.pabalvrz.sportsstatsapp.domain.ports.in.GetSportByNameUseCase;
-import com.pabalvrz.sportsstatsapp.domain.ports.in.ListSportsUseCase;
-import com.pabalvrz.sportsstatsapp.domain.ports.in.UpdateSportUseCase;
+import com.pabalvrz.sportsstatsapp.application.command.CommandBus;
+import com.pabalvrz.sportsstatsapp.application.command.create.CreateSportCommand;
+import com.pabalvrz.sportsstatsapp.application.command.update.UpdateSportCommand;
+import com.pabalvrz.sportsstatsapp.application.query.QueryBus;
+import com.pabalvrz.sportsstatsapp.application.query.find.GetSportByIdQuery;
+import com.pabalvrz.sportsstatsapp.application.query.find.GetSportByNameQuery;
+import com.pabalvrz.sportsstatsapp.application.query.list.ListSportsQuery;
+import com.pabalvrz.sportsstatsapp.application.result.SportResult;
 import com.pabalvrz.sportsstatsapp.infrastructure.adapters.input.rest.request.CreateSportRequest;
 import com.pabalvrz.sportsstatsapp.infrastructure.adapters.input.rest.request.UpdateSportRequest;
 import com.pabalvrz.sportsstatsapp.infrastructure.adapters.input.rest.response.SportResponse;
@@ -27,33 +29,21 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 @RequestMapping("/sports")
 public class SportController {
 
-	private final CreateSportUseCase createSportUseCase;
-	private final GetSportByIdUseCase getSportByIdUseCase;
-	private final GetSportByNameUseCase getSportByNameUseCase;
-	private final ListSportsUseCase listSportsUseCase;
-	private final UpdateSportUseCase updateSportUseCase;
+	private final CommandBus commandBus;
+	private final QueryBus queryBus;
 
-	public SportController(
-			CreateSportUseCase createSportUseCase,
-			GetSportByIdUseCase getSportByIdUseCase,
-			GetSportByNameUseCase getSportByNameUseCase,
-			ListSportsUseCase listSportsUseCase,
-			UpdateSportUseCase updateSportUseCase
-	) {
-		this.createSportUseCase = createSportUseCase;
-		this.getSportByIdUseCase = getSportByIdUseCase;
-		this.getSportByNameUseCase = getSportByNameUseCase;
-		this.listSportsUseCase = listSportsUseCase;
-		this.updateSportUseCase = updateSportUseCase;
+	public SportController(CommandBus commandBus, QueryBus queryBus) {
+		this.commandBus = commandBus;
+		this.queryBus = queryBus;
 	}
 
 	@PostMapping
 	public ResponseEntity<SportResponse> create(@Valid @RequestBody CreateSportRequest request) {
-		Sport sport = createSportUseCase.execute(request.name());
+		SportResult sport = commandBus.dispatch(new CreateSportCommand(request.name()));
 
 		URI location = ServletUriComponentsBuilder.fromCurrentRequest()
 				.path("/{id}")
-				.buildAndExpand(sport.getId())
+				.buildAndExpand(sport.id())
 				.toUri();
 
 		return ResponseEntity.created(location)
@@ -61,31 +51,33 @@ public class SportController {
 	}
 
 	@GetMapping("/{id}")
-	public SportResponse getById(@PathVariable UUID id) {
-		Sport sport = getSportByIdUseCase.execute(id);
+	public ResponseEntity<SportResponse> getById(@PathVariable UUID id) {
+		SportResult sport = queryBus.ask(new GetSportByIdQuery(id));
 
-		return SportResponse.from(sport);
+		return ResponseEntity.ok(SportResponse.from(sport));
 	}
 
 	@GetMapping("/by-name/{name}")
-	public SportResponse getByName(@PathVariable String name) {
-		Sport sport = getSportByNameUseCase.execute(name);
+	public ResponseEntity<SportResponse> getByName(@PathVariable String name) {
+		SportResult sport = queryBus.ask(new GetSportByNameQuery(name));
 
-		return SportResponse.from(sport);
+		return ResponseEntity.ok(SportResponse.from(sport));
 	}
 
 	@PutMapping("/{id}")
-	public SportResponse update(@PathVariable UUID id, @Valid @RequestBody UpdateSportRequest request) {
-		Sport sport = updateSportUseCase.execute(id, request.name());
+	public ResponseEntity<SportResponse> update(@PathVariable UUID id, @Valid @RequestBody UpdateSportRequest request) {
+		SportResult sport = commandBus.dispatch(new UpdateSportCommand(id, request.name()));
 
-		return SportResponse.from(sport);
+		return ResponseEntity.ok(SportResponse.from(sport));
 	}
 
 	@GetMapping
-	public List<SportResponse> list() {
-		return listSportsUseCase.execute()
+	public ResponseEntity<List<SportResponse>> list() {
+		List<SportResponse> sports = queryBus.ask(new ListSportsQuery())
 				.stream()
 				.map(SportResponse::from)
 				.toList();
+
+		return ResponseEntity.ok(sports);
 	}
 }

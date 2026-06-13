@@ -22,7 +22,7 @@ public class SportJpaEntity {
 	@Column(nullable = false, updatable = false)
 	private UUID id;
 
-	@Column(nullable = false, unique = true, length = 120)
+	@Column(nullable = false, length = 120)
 	private String name;
 
 	@Column(nullable = false)

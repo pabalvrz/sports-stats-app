@@ -1,9 +1,10 @@
-package com.pabalvrz.sportsstatsapp.application.usecases;
+package com.pabalvrz.sportsstatsapp.application.command.update;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.pabalvrz.sportsstatsapp.application.exception.SportNotFoundException;
+import com.pabalvrz.sportsstatsapp.application.result.SportResult;
 import com.pabalvrz.sportsstatsapp.domain.model.Sport;
 import com.pabalvrz.sportsstatsapp.domain.ports.out.SportRepositoryPort;
 import java.util.ArrayList;
@@ -12,31 +13,38 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
-class UpdateSportUseCaseImplTest {
+class UpdateSportCommandHandlerTest {
 
 	private final InMemorySportRepository sportRepository = new InMemorySportRepository();
-	private final UpdateSportUseCaseImpl updateSportUseCase = new UpdateSportUseCaseImpl(sportRepository);
+	private final UpdateSportCommandHandler handler = new UpdateSportCommandHandler(sportRepository);
 
 	@Test
 	void updatesSportName() {
 		UUID id = UUID.randomUUID();
 		sportRepository.save(Sport.reconstitute(id, "Football", false));
 
-		Sport updatedSport = updateSportUseCase.execute(id, "Tennis");
+		SportResult updatedSport = handler.handle(new UpdateSportCommand(id, "Tennis"));
 
-		assertThat(updatedSport.getId()).isEqualTo(id);
-		assertThat(updatedSport.getName()).isEqualTo("Tennis");
-		assertThat(updatedSport.isActive()).isFalse();
-		assertThat(sportRepository.findAll()).containsExactly(updatedSport);
+		assertThat(updatedSport.id()).isEqualTo(id);
+		assertThat(updatedSport.name()).isEqualTo("Tennis");
+		assertThat(updatedSport.active()).isFalse();
+		assertThat(sportRepository.findAll())
+				.extracting(Sport::getName)
+				.containsExactly("Tennis");
 	}
 
 	@Test
 	void failsWhenSportDoesNotExist() {
 		UUID id = UUID.randomUUID();
 
-		assertThatThrownBy(() -> updateSportUseCase.execute(id, "Tennis"))
+		assertThatThrownBy(() -> handler.handle(new UpdateSportCommand(id, "Tennis")))
 				.isInstanceOf(SportNotFoundException.class)
 				.hasMessage("Sport not found: " + id);
+	}
+
+	@Test
+	void exposesHandledCommandType() {
+		assertThat(handler.commandType()).isEqualTo(UpdateSportCommand.class);
 	}
 
 	private static final class InMemorySportRepository implements SportRepositoryPort {

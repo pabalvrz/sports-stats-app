@@ -1,9 +1,10 @@
-package com.pabalvrz.sportsstatsapp.application.usecases;
+package com.pabalvrz.sportsstatsapp.application.query.find;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.pabalvrz.sportsstatsapp.application.exception.SportNotFoundException;
+import com.pabalvrz.sportsstatsapp.application.result.SportResult;
 import com.pabalvrz.sportsstatsapp.domain.model.Sport;
 import com.pabalvrz.sportsstatsapp.domain.ports.out.SportRepositoryPort;
 import java.util.ArrayList;
@@ -12,26 +13,31 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
-class GetSportByNameUseCaseImplTest {
+class GetSportByNameQueryHandlerTest {
 
 	private final InMemorySportRepository sportRepository = new InMemorySportRepository();
-	private final GetSportByNameUseCaseImpl getSportByNameUseCase = new GetSportByNameUseCaseImpl(sportRepository);
+	private final GetSportByNameQueryHandler handler = new GetSportByNameQueryHandler(sportRepository);
 
 	@Test
 	void getsSportByName() {
 		Sport sport = Sport.reconstitute(UUID.randomUUID(), "Football", true);
 		sportRepository.save(sport);
 
-		Sport foundSport = getSportByNameUseCase.execute(" Football ");
+		SportResult foundSport = handler.handle(new GetSportByNameQuery(" football "));
 
-		assertThat(foundSport).isEqualTo(sport);
+		assertThat(foundSport).isEqualTo(SportResult.from(sport));
 	}
 
 	@Test
 	void failsWhenSportDoesNotExist() {
-		assertThatThrownBy(() -> getSportByNameUseCase.execute("Football"))
+		assertThatThrownBy(() -> handler.handle(new GetSportByNameQuery("Football")))
 				.isInstanceOf(SportNotFoundException.class)
 				.hasMessage("Sport not found: Football");
+	}
+
+	@Test
+	void exposesHandledQueryType() {
+		assertThat(handler.queryType()).isEqualTo(GetSportByNameQuery.class);
 	}
 
 	private static final class InMemorySportRepository implements SportRepositoryPort {
@@ -51,7 +57,9 @@ class GetSportByNameUseCaseImplTest {
 
 		@Override
 		public Optional<Sport> findByName(String name) {
-			return sports.stream().filter(sport -> sport.getName().equals(name)).findFirst();
+			return sports.stream()
+					.filter(sport -> sport.getName().trim().equalsIgnoreCase(name.trim()))
+					.findFirst();
 		}
 
 		@Override

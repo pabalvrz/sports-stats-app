@@ -1,8 +1,6 @@
 package com.pabalvrz.sportsstatsapp.infrastructure.adapters.input.rest.controller;
 
 import static org.hamcrest.Matchers.hasSize;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -11,13 +9,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.pabalvrz.sportsstatsapp.application.command.CommandBus;
+import com.pabalvrz.sportsstatsapp.application.command.create.CreateSportCommand;
+import com.pabalvrz.sportsstatsapp.application.command.update.UpdateSportCommand;
 import com.pabalvrz.sportsstatsapp.application.exception.SportNotFoundException;
-import com.pabalvrz.sportsstatsapp.domain.model.Sport;
-import com.pabalvrz.sportsstatsapp.domain.ports.in.CreateSportUseCase;
-import com.pabalvrz.sportsstatsapp.domain.ports.in.GetSportByIdUseCase;
-import com.pabalvrz.sportsstatsapp.domain.ports.in.GetSportByNameUseCase;
-import com.pabalvrz.sportsstatsapp.domain.ports.in.ListSportsUseCase;
-import com.pabalvrz.sportsstatsapp.domain.ports.in.UpdateSportUseCase;
+import com.pabalvrz.sportsstatsapp.application.query.QueryBus;
+import com.pabalvrz.sportsstatsapp.application.query.find.GetSportByIdQuery;
+import com.pabalvrz.sportsstatsapp.application.query.find.GetSportByNameQuery;
+import com.pabalvrz.sportsstatsapp.application.query.list.ListSportsQuery;
+import com.pabalvrz.sportsstatsapp.application.result.SportResult;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -34,24 +34,16 @@ class SportControllerTest {
 	private MockMvc mockMvc;
 
 	@MockitoBean
-	private CreateSportUseCase createSportUseCase;
+	private CommandBus commandBus;
 
 	@MockitoBean
-	private GetSportByIdUseCase getSportByIdUseCase;
-
-	@MockitoBean
-	private GetSportByNameUseCase getSportByNameUseCase;
-
-	@MockitoBean
-	private ListSportsUseCase listSportsUseCase;
-
-	@MockitoBean
-	private UpdateSportUseCase updateSportUseCase;
+	private QueryBus queryBus;
 
 	@Test
 	void createsSport() throws Exception {
 		UUID id = UUID.randomUUID();
-		when(createSportUseCase.execute(any())).thenReturn(Sport.reconstitute(id, "Football", true));
+		when(commandBus.dispatch(new CreateSportCommand("Football")))
+				.thenReturn(new SportResult(id, "Football", true));
 
 		mockMvc.perform(post("/sports")
 						.contentType(MediaType.APPLICATION_JSON)
@@ -79,7 +71,7 @@ class SportControllerTest {
 	@Test
 	void getsSportById() throws Exception {
 		UUID id = UUID.randomUUID();
-		when(getSportByIdUseCase.execute(id)).thenReturn(Sport.reconstitute(id, "Basketball", true));
+		when(queryBus.ask(new GetSportByIdQuery(id))).thenReturn(new SportResult(id, "Basketball", true));
 
 		mockMvc.perform(get("/sports/{id}", id))
 				.andExpect(status().isOk())
@@ -91,7 +83,7 @@ class SportControllerTest {
 	@Test
 	void returnsNotFoundForMissingSport() throws Exception {
 		UUID id = UUID.randomUUID();
-		when(getSportByIdUseCase.execute(id)).thenThrow(new SportNotFoundException(id));
+		when(queryBus.ask(new GetSportByIdQuery(id))).thenThrow(new SportNotFoundException(id));
 
 		mockMvc.perform(get("/sports/{id}", id))
 				.andExpect(status().isNotFound())
@@ -101,7 +93,7 @@ class SportControllerTest {
 	@Test
 	void getsSportByName() throws Exception {
 		UUID id = UUID.randomUUID();
-		when(getSportByNameUseCase.execute("Football")).thenReturn(Sport.reconstitute(id, "Football", true));
+		when(queryBus.ask(new GetSportByNameQuery("Football"))).thenReturn(new SportResult(id, "Football", true));
 
 		mockMvc.perform(get("/sports/by-name/{name}", "Football"))
 				.andExpect(status().isOk())
@@ -112,7 +104,7 @@ class SportControllerTest {
 
 	@Test
 	void returnsNotFoundForMissingSportName() throws Exception {
-		when(getSportByNameUseCase.execute("Football")).thenThrow(new SportNotFoundException("Football"));
+		when(queryBus.ask(new GetSportByNameQuery("Football"))).thenThrow(new SportNotFoundException("Football"));
 
 		mockMvc.perform(get("/sports/by-name/{name}", "Football"))
 				.andExpect(status().isNotFound())
@@ -122,7 +114,8 @@ class SportControllerTest {
 	@Test
 	void updatesSport() throws Exception {
 		UUID id = UUID.randomUUID();
-		when(updateSportUseCase.execute(eq(id), any())).thenReturn(Sport.reconstitute(id, "Tennis", true));
+		when(commandBus.dispatch(new UpdateSportCommand(id, "Tennis")))
+				.thenReturn(new SportResult(id, "Tennis", true));
 
 		mockMvc.perform(put("/sports/{id}", id)
 						.contentType(MediaType.APPLICATION_JSON)
@@ -149,7 +142,7 @@ class SportControllerTest {
 	@Test
 	void returnsNotFoundWhenUpdatingMissingSport() throws Exception {
 		UUID id = UUID.randomUUID();
-		when(updateSportUseCase.execute(eq(id), any())).thenThrow(new SportNotFoundException(id));
+		when(commandBus.dispatch(new UpdateSportCommand(id, "Tennis"))).thenThrow(new SportNotFoundException(id));
 
 		mockMvc.perform(put("/sports/{id}", id)
 						.contentType(MediaType.APPLICATION_JSON)
@@ -162,9 +155,9 @@ class SportControllerTest {
 
 	@Test
 	void listsSports() throws Exception {
-		when(listSportsUseCase.execute()).thenReturn(List.of(
-				Sport.reconstitute(UUID.randomUUID(), "Football", true),
-				Sport.reconstitute(UUID.randomUUID(), "Tennis", false)
+		when(queryBus.ask(new ListSportsQuery())).thenReturn(List.of(
+				new SportResult(UUID.randomUUID(), "Football", true),
+				new SportResult(UUID.randomUUID(), "Tennis", false)
 		));
 
 		mockMvc.perform(get("/sports"))

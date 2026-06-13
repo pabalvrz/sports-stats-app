@@ -219,8 +219,22 @@ com.pabalvrz.sportsstatsapp
 |       |-- in
 |       `-- out
 |-- application
+|   |-- command
+|   |   |-- Command.java
+|   |   |-- CommandBus.java
+|   |   |-- CommandHandler.java
+|   |   |-- SimpleCommandBus.java
+|   |   |-- create
+|   |   `-- update
 |   |-- exception
-|   `-- usecases
+|   |-- result
+|   `-- query
+|       |-- Query.java
+|       |-- QueryBus.java
+|       |-- QueryHandler.java
+|       |-- SimpleQueryBus.java
+|       |-- find
+|       `-- list
 `-- infrastructure
     `-- adapters
         |-- input
@@ -244,21 +258,32 @@ Contains the business model and pure domain concepts.
 Responsibilities:
 
 - Domain models
-- Input and output ports
+- Input ports / use case contracts
+- Output ports
 - Domain exceptions
 
 The domain layer should not depend on Spring, JPA, REST APIs or infrastructure details.
 
 ### application
 
-Contains application use cases.
+Contains the internal CQRS application model: commands, queries, handlers, and synchronous buses.
 
 Responsibilities:
 
+- Defining command objects for state-changing operations
+- Defining query objects for read-only operations
+- Dispatching commands through `CommandBus`
+- Dispatching queries through `QueryBus`
+- Handling each command/query in a dedicated handler
+- Implementing the domain input ports / use case contracts
+- Returning application result DTOs to REST adapters
 - Orchestrating domain logic
 - Defining application-level flows
-- Implementing domain use case contracts
 - Translating missing resources into application exceptions
+
+Commands currently cover creating and updating sports. Queries currently cover listing sports, finding a sport by id, and finding a sport by name.
+
+The command bus is explicit and type-safe for the current write operations instead of using a dynamic handler registry. The query bus is a simple in-process dispatcher backed by Spring-managed handlers. Both return application result DTOs, so REST controllers do not expose or map domain models directly. This design does not introduce event sourcing, messaging, async processing, separate read databases, or separate read models.
 
 ### infrastructure
 

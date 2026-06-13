@@ -2,9 +2,8 @@ package com.pabalvrz.sportsstatsapp.domain.model;
 
 import com.pabalvrz.sportsstatsapp.domain.exception.SportIdentifierRequiredException;
 import com.pabalvrz.sportsstatsapp.domain.exception.SportNameRequiredException;
-import lombok.Getter;
-
 import java.util.UUID;
+import lombok.Getter;
 
 @Getter
 public final class Sport {
@@ -25,10 +24,6 @@ public final class Sport {
 
 	public static Sport create(String name) {
 		return new Sport(UUID.randomUUID(), name, true);
-	}
-
-	public static String normalizeName(String name) {
-		return requireName(name);
 	}
 
 	public static Sport reconstitute(UUID id, String name, boolean active) {
