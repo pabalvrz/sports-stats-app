@@ -30,7 +30,7 @@ sports-stats-app/
 
 Spring Boot microservice responsible for the shared sports catalog domain.
 
-The first supported aggregate is `Sport`, with endpoints to create, list, retrieve by identifier, retrieve by name and update sports.
+The first supported aggregate is `Sport`, with endpoints to create, list, filter by active status, retrieve by identifier, retrieve by name, update, activate, and deactivate sports.
 
 Current status:
 
@@ -47,9 +47,12 @@ Sports API summary:
 ```http
 POST /sports
 GET /sports
+GET /sports?active={true|false}
 GET /sports/{id}
 GET /sports/by-name/{name}
 PUT /sports/{id}
+PATCH /sports/{id}/activate
+PATCH /sports/{id}/deactivate
 ```
 
 See the service README for full API examples:

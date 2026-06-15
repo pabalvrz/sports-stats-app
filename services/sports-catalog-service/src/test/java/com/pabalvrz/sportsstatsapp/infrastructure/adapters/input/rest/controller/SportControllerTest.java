@@ -202,7 +202,7 @@ class SportControllerTest {
 
 	@Test
 	void listsSports() throws Exception {
-		when(queryBus.ask(new ListSportsQuery())).thenReturn(List.of(
+		when(queryBus.ask(new ListSportsQuery(null))).thenReturn(List.of(
 				new SportResult(UUID.randomUUID(), "Football", true),
 				new SportResult(UUID.randomUUID(), "Tennis", false)
 		));
@@ -212,5 +212,31 @@ class SportControllerTest {
 				.andExpect(jsonPath("$", hasSize(2)))
 				.andExpect(jsonPath("$[0].name").value("Football"))
 				.andExpect(jsonPath("$[1].name").value("Tennis"));
+	}
+
+	@Test
+	void listsSportsFilteredByActiveStatus() throws Exception {
+		when(queryBus.ask(new ListSportsQuery(true))).thenReturn(List.of(
+				new SportResult(UUID.randomUUID(), "Football", true)
+		));
+
+		mockMvc.perform(get("/sports").param("active", "true"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$", hasSize(1)))
+				.andExpect(jsonPath("$[0].name").value("Football"))
+				.andExpect(jsonPath("$[0].active").value(true));
+	}
+
+	@Test
+	void listsSportsFilteredByInactiveStatus() throws Exception {
+		when(queryBus.ask(new ListSportsQuery(false))).thenReturn(List.of(
+				new SportResult(UUID.randomUUID(), "Tennis", false)
+		));
+
+		mockMvc.perform(get("/sports").param("active", "false"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$", hasSize(1)))
+				.andExpect(jsonPath("$[0].name").value("Tennis"))
+				.andExpect(jsonPath("$[0].active").value(false));
 	}
 }

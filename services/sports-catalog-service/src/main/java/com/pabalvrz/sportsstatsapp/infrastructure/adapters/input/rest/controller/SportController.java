@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -89,8 +90,8 @@ public class SportController {
 	}
 
 	@GetMapping
-	public ResponseEntity<List<SportResponse>> list() {
-		List<SportResponse> sports = queryBus.ask(new ListSportsQuery())
+	public ResponseEntity<List<SportResponse>> list(@RequestParam(required = false) Boolean active) {
+		List<SportResponse> sports = queryBus.ask(new ListSportsQuery(active))
 				.stream()
 				.map(SportResponse::from)
 				.toList();

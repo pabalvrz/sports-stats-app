@@ -57,5 +57,10 @@ class CreateSportCommandHandlerTest {
 		public List<Sport> findAll() {
 			return List.copyOf(sports);
 		}
+
+		@Override
+		public List<Sport> findByActive(boolean active) {
+			return sports.stream().filter(sport -> sport.isActive() == active).toList();
+		}
 	}
 }

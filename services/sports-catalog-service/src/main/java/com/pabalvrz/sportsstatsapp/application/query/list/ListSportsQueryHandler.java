@@ -24,7 +24,7 @@ public class ListSportsQueryHandler implements QueryHandler<ListSportsQuery, Lis
 	@Override
 	@Transactional(readOnly = true)
 	public List<SportResult> handle(ListSportsQuery query) {
-		return sportRepository.findAll()
+		return (query.active() == null ? sportRepository.findAll() : sportRepository.findByActive(query.active()))
 				.stream()
 				.map(SportResult::from)
 				.toList();

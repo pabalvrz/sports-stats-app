@@ -55,9 +55,12 @@ Available endpoints:
 ```http
 POST /sports
 GET /sports
+GET /sports?active={true|false}
 GET /sports/{id}
 GET /sports/by-name/{name}
 PUT /sports/{id}
+PATCH /sports/{id}/activate
+PATCH /sports/{id}/deactivate
 ```
 
 ### Create Sport
@@ -96,6 +99,20 @@ Location: /sports/{id}
 GET /sports
 ```
 
+Optional query parameters:
+
+- `active=true` returns only active sports.
+- `active=false` returns only inactive sports.
+- Omitting `active` returns all sports.
+
+Examples:
+
+```http
+GET /sports
+GET /sports?active=true
+GET /sports?active=false
+```
+
 Response:
 
 ```json
@@ -108,7 +125,7 @@ Response:
   {
     "id": "b325ab0e-25ec-49c5-9987-a41e8d82a3ab",
     "name": "Tennis",
-    "active": true
+    "active": false
   }
 ]
 ```
@@ -173,6 +190,38 @@ Response:
   "id": "7d912d34-0a0d-4a21-a833-9b6f54f6d91d",
   "name": "Association Football",
   "active": true
+}
+```
+
+### Activate Sport
+
+```http
+PATCH /sports/{id}/activate
+```
+
+Response:
+
+```json
+{
+  "id": "7d912d34-0a0d-4a21-a833-9b6f54f6d91d",
+  "name": "Football",
+  "active": true
+}
+```
+
+### Deactivate Sport
+
+```http
+PATCH /sports/{id}/deactivate
+```
+
+Response:
+
+```json
+{
+  "id": "7d912d34-0a0d-4a21-a833-9b6f54f6d91d",
+  "name": "Football",
+  "active": false
 }
 ```
 
@@ -280,7 +329,7 @@ Responsibilities:
 - Defining application-level flows
 - Translating missing resources into application exceptions
 
-Commands currently cover creating and updating sports. Queries currently cover listing sports, finding a sport by id, and finding a sport by name.
+Commands currently cover creating, updating, activating, and deactivating sports. Queries currently cover listing sports, optionally filtering listed sports by active status, finding a sport by id, and finding a sport by name.
 
 The command bus and query bus are simple in-process dispatchers backed by Spring-managed handlers. `SimpleCommandBus` and `SimpleQueryBus` build handler registries from each handler's command/query type. Both return application result DTOs, so REST controllers do not expose or map domain models directly. This design does not introduce event sourcing, messaging, async processing, separate read databases, or separate read models.
 
