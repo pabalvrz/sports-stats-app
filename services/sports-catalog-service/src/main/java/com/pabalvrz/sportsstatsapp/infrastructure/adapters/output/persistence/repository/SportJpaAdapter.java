@@ -36,4 +36,9 @@ public class SportJpaAdapter implements SportRepositoryPort {
 	public List<Sport> findAll() {
 		return springDataRepository.findAll().stream().map(SportPersistenceMapper::toDomain).toList();
 	}
+
+	@Override
+	public List<Sport> findByActive(boolean active) {
+		return springDataRepository.findByActive(active).stream().map(SportPersistenceMapper::toDomain).toList();
+	}
 }

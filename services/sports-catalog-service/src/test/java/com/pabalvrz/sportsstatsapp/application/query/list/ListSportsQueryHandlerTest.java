@@ -23,9 +23,33 @@ class ListSportsQueryHandlerTest {
 		sportRepository.save(football);
 		sportRepository.save(tennis);
 
-		List<SportResult> sports = handler.handle(new ListSportsQuery());
+		List<SportResult> sports = handler.handle(new ListSportsQuery(null));
 
 		assertThat(sports).containsExactly(SportResult.from(football), SportResult.from(tennis));
+	}
+
+	@Test
+	void listsOnlyActiveSports() {
+		Sport football = Sport.reconstitute(UUID.randomUUID(), "Football", true);
+		Sport tennis = Sport.reconstitute(UUID.randomUUID(), "Tennis", false);
+		sportRepository.save(football);
+		sportRepository.save(tennis);
+
+		List<SportResult> sports = handler.handle(new ListSportsQuery(true));
+
+		assertThat(sports).containsExactly(SportResult.from(football));
+	}
+
+	@Test
+	void listsOnlyInactiveSports() {
+		Sport football = Sport.reconstitute(UUID.randomUUID(), "Football", true);
+		Sport tennis = Sport.reconstitute(UUID.randomUUID(), "Tennis", false);
+		sportRepository.save(football);
+		sportRepository.save(tennis);
+
+		List<SportResult> sports = handler.handle(new ListSportsQuery(false));
+
+		assertThat(sports).containsExactly(SportResult.from(tennis));
 	}
 
 	@Test
@@ -56,6 +80,11 @@ class ListSportsQueryHandlerTest {
 		@Override
 		public List<Sport> findAll() {
 			return List.copyOf(sports);
+		}
+
+		@Override
+		public List<Sport> findByActive(boolean active) {
+			return sports.stream().filter(sport -> sport.isActive() == active).toList();
 		}
 	}
 }

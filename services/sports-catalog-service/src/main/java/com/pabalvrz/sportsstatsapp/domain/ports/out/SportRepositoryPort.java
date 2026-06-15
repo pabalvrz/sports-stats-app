@@ -14,4 +14,6 @@ public interface SportRepositoryPort {
 	Optional<Sport> findByName(String name);
 
 	List<Sport> findAll();
+
+	List<Sport> findByActive(boolean active);
 }
