@@ -21,14 +21,17 @@ import com.pabalvrz.sportsstatsapp.application.query.find.GetSportByIdQuery;
 import com.pabalvrz.sportsstatsapp.application.query.find.GetSportByNameQuery;
 import com.pabalvrz.sportsstatsapp.application.query.list.ListSportsQuery;
 import com.pabalvrz.sportsstatsapp.application.result.SportResult;
+import com.pabalvrz.sportsstatsapp.domain.exception.SportIdentifierRequiredException;
+import com.pabalvrz.sportsstatsapp.domain.exception.SportNameRequiredException;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 
 @WebMvcTest(SportController.class)
 class SportControllerTest {
@@ -66,9 +69,104 @@ class SportControllerTest {
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
 								{"name":""}
+				"""))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.status").value(400))
+				.andExpect(jsonPath("$.error").value("Bad Request"))
+				.andExpect(jsonPath("$.message").value("Request validation failed"))
+				.andExpect(jsonPath("$.path").value("/sports"))
+				.andExpect(jsonPath("$.fieldErrors[0].field").value("name"))
+				.andExpect(jsonPath("$.fieldErrors[0].message").value("name must not be blank"));
+	}
+
+	@Test
+	void returnsBadRequestForInvalidDomainSportName() throws Exception {
+		when(commandBus.dispatch(new CreateSportCommand("Football"))).thenThrow(new SportNameRequiredException());
+
+		mockMvc.perform(post("/sports")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"name":"Football"}
 								"""))
 				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.title").value("Invalid request body"));
+				.andExpect(jsonPath("$.status").value(400))
+				.andExpect(jsonPath("$.error").value("Bad Request"))
+				.andExpect(jsonPath("$.message").value("Sport name is required"))
+				.andExpect(jsonPath("$.path").value("/sports"));
+	}
+
+	@Test
+	void returnsBadRequestForMissingDomainSportIdentifier() throws Exception {
+		UUID id = UUID.randomUUID();
+		when(commandBus.dispatch(new ActivateSportCommand(id))).thenThrow(new SportIdentifierRequiredException());
+
+		mockMvc.perform(patch("/sports/{id}/activate", id))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.status").value(400))
+				.andExpect(jsonPath("$.error").value("Bad Request"))
+				.andExpect(jsonPath("$.message").value("Sport identifier is required"))
+				.andExpect(jsonPath("$.path").value("/sports/" + id + "/activate"));
+	}
+
+	@Test
+	void returnsConflictForDuplicateSportName() throws Exception {
+		when(commandBus.dispatch(new CreateSportCommand("Football")))
+				.thenThrow(new DataIntegrityViolationException("duplicate key value violates unique constraint"));
+
+		mockMvc.perform(post("/sports")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"name":"Football"}
+								"""))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.status").value(409))
+				.andExpect(jsonPath("$.error").value("Conflict"))
+				.andExpect(jsonPath("$.message").value("Sport name already exists"))
+				.andExpect(jsonPath("$.path").value("/sports"));
+	}
+
+	@Test
+	void returnsServerErrorForMissingCommandHandler() throws Exception {
+		when(commandBus.dispatch(new CreateSportCommand("Football")))
+				.thenThrow(new IllegalArgumentException("No command handler registered for "
+						+ CreateSportCommand.class.getName()));
+
+		mockMvc.perform(post("/sports")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"name":"Football"}
+								"""))
+				.andExpect(status().isInternalServerError())
+				.andExpect(jsonPath("$.status").value(500))
+				.andExpect(jsonPath("$.error").value("Internal Server Error"))
+				.andExpect(jsonPath("$.message").value("Application handler is not configured"))
+				.andExpect(jsonPath("$.path").value("/sports"));
+	}
+
+	@Test
+	void returnsServerErrorForMissingQueryHandler() throws Exception {
+		when(queryBus.ask(new ListSportsQuery(null)))
+				.thenThrow(new IllegalArgumentException("No query handler registered for "
+						+ ListSportsQuery.class.getName()));
+
+		mockMvc.perform(get("/sports"))
+				.andExpect(status().isInternalServerError())
+				.andExpect(jsonPath("$.status").value(500))
+				.andExpect(jsonPath("$.error").value("Internal Server Error"))
+				.andExpect(jsonPath("$.message").value("Application handler is not configured"))
+				.andExpect(jsonPath("$.path").value("/sports"));
+	}
+
+	@Test
+	void returnsSafeServerErrorForUnexpectedErrors() throws Exception {
+		when(queryBus.ask(new ListSportsQuery(null))).thenThrow(new RuntimeException("database credentials leaked"));
+
+		mockMvc.perform(get("/sports"))
+				.andExpect(status().isInternalServerError())
+				.andExpect(jsonPath("$.status").value(500))
+				.andExpect(jsonPath("$.error").value("Internal Server Error"))
+				.andExpect(jsonPath("$.message").value("An unexpected error occurred"))
+				.andExpect(jsonPath("$.path").value("/sports"));
 	}
 
 	@Test
@@ -90,7 +188,10 @@ class SportControllerTest {
 
 		mockMvc.perform(get("/sports/{id}", id))
 				.andExpect(status().isNotFound())
-				.andExpect(jsonPath("$.title").value("Sport not found"));
+				.andExpect(jsonPath("$.status").value(404))
+				.andExpect(jsonPath("$.error").value("Not Found"))
+				.andExpect(jsonPath("$.message").value("Sport not found: " + id))
+				.andExpect(jsonPath("$.path").value("/sports/" + id));
 	}
 
 	@Test
@@ -111,7 +212,10 @@ class SportControllerTest {
 
 		mockMvc.perform(get("/sports/by-name/{name}", "Football"))
 				.andExpect(status().isNotFound())
-				.andExpect(jsonPath("$.title").value("Sport not found"));
+				.andExpect(jsonPath("$.status").value(404))
+				.andExpect(jsonPath("$.error").value("Not Found"))
+				.andExpect(jsonPath("$.message").value("Sport not found: Football"))
+				.andExpect(jsonPath("$.path").value("/sports/by-name/Football"));
 	}
 
 	@Test
@@ -133,13 +237,20 @@ class SportControllerTest {
 
 	@Test
 	void rejectsInvalidUpdateRequest() throws Exception {
-		mockMvc.perform(put("/sports/{id}", UUID.randomUUID())
+		UUID id = UUID.randomUUID();
+
+		mockMvc.perform(put("/sports/{id}", id)
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
 								{"name":""}
-								"""))
+				"""))
 				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.title").value("Invalid request body"));
+				.andExpect(jsonPath("$.status").value(400))
+				.andExpect(jsonPath("$.error").value("Bad Request"))
+				.andExpect(jsonPath("$.message").value("Request validation failed"))
+				.andExpect(jsonPath("$.path").value("/sports/" + id))
+				.andExpect(jsonPath("$.fieldErrors[0].field").value("name"))
+				.andExpect(jsonPath("$.fieldErrors[0].message").value("name must not be blank"));
 	}
 
 	@Test
@@ -151,9 +262,12 @@ class SportControllerTest {
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
 								{"name":"Tennis"}
-								"""))
+				"""))
 				.andExpect(status().isNotFound())
-				.andExpect(jsonPath("$.title").value("Sport not found"));
+				.andExpect(jsonPath("$.status").value(404))
+				.andExpect(jsonPath("$.error").value("Not Found"))
+				.andExpect(jsonPath("$.message").value("Sport not found: " + id))
+				.andExpect(jsonPath("$.path").value("/sports/" + id));
 	}
 
 	@Test
@@ -175,7 +289,10 @@ class SportControllerTest {
 
 		mockMvc.perform(patch("/sports/{id}/activate", id))
 				.andExpect(status().isNotFound())
-				.andExpect(jsonPath("$.title").value("Sport not found"));
+				.andExpect(jsonPath("$.status").value(404))
+				.andExpect(jsonPath("$.error").value("Not Found"))
+				.andExpect(jsonPath("$.message").value("Sport not found: " + id))
+				.andExpect(jsonPath("$.path").value("/sports/" + id + "/activate"));
 	}
 
 	@Test
@@ -197,7 +314,10 @@ class SportControllerTest {
 
 		mockMvc.perform(patch("/sports/{id}/deactivate", id))
 				.andExpect(status().isNotFound())
-				.andExpect(jsonPath("$.title").value("Sport not found"));
+				.andExpect(jsonPath("$.status").value(404))
+				.andExpect(jsonPath("$.error").value("Not Found"))
+				.andExpect(jsonPath("$.message").value("Sport not found: " + id))
+				.andExpect(jsonPath("$.path").value("/sports/" + id + "/deactivate"));
 	}
 
 	@Test
